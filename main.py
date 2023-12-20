@@ -46,10 +46,10 @@ def checkTotalHours(data_value):
         return False, total_hours
 
 
-def toeslagUrenBepalen(data_value):
+def toeslagUrenBepalen(data_value, uren_vergoed):
     normaalUren = []
     toeslagUren = []
-    urenVergoed = 1.5
+    urenVergoed = uren_vergoed
     for entry in data_value:
         uren = entry['Aantal']
 
@@ -115,6 +115,7 @@ def weekdagToeslag(data_value):
     newEntries = []
 
     for entry in data_value:
+        print(f"entry:{entry}")
         begintijd = datetime.strptime(entry["Begintijd"], '%H:%M:%S').time()
         eindtijd = datetime.strptime(entry["Eindtijd"], '%H:%M:%S').time()
 
@@ -147,84 +148,81 @@ def weekdagToeslag(data_value):
             time2 = datetime.strptime(tempdict['Begintijd'], '%H:%M:%S').time()
             time_difference = (datetime.combine(
                 datetime.today(), time1) - datetime.combine(datetime.today(), time2)).total_seconds()/3600
-            tempdict['Aantal'] = time_difference
-
-            # Add entry to list
-            newEntries.append(tempdict)
+            
+            tempdict['Aantal'] = round(time_difference,1)
+            
+            if time_difference:
+                newEntries.append(tempdict)
 
     print()
     pprint(newEntries)
-
-
-def overigeToeslag(data_value, toeslag):
-    for entry in data_value:
-        entry["toeslagAantal"] = toeslag*entry["Aantal"]
-
-    return data_value
 
 
 def feestdagCheck(date, list_of_holidays):
     found = any(entry['Datum'].split('T')[0] ==
                 date for entry in list_of_holidays)
 
+
     if found:
+        print(f"{date} is een feestdag")
         return True
     else:
         return False
 
 
-def postAfasData(data_value, toeslag):
-    date = data_value[0]["Datum"].split('T')[0]
-    print(
-        F"Uren op {date} zijn binnen de eerste 1.5 reisuren. Toeslag {toeslag}")
-    pass
+def postAfasData(data_list, toeslag):
 
+    for entry in data_list:
+        pprint(entry)
+        print(f"Toeslag: {toeslag}")
 
 def applyConditions(sorted_data, data_feestdagen):
-    for emp_key, date_value in sorted_data.items():
+    for emp_key, dates in sorted_data.items():
         employee = emp_key
 
-        for date_key, data_value in date_value.items():
+        for date_key, data_value in dates.items():
             date = date_key
             dag = data_value[0]['Weekdag']
 
             uren_meer_dan_anderhalf, totallHours = checkTotalHours(data_value)
+            # print(f"Emp: {emp_key}. Date: {date}. Total hours: {totallHours}")
 
             if not uren_meer_dan_anderhalf:
                 toeslag = 1
-                postAfasData(data_value=data_value,
+                date = data_value[0]["Datum"].split('T')[0]
+                # print(f"Uren op {date} zijn binnen de eerste 1.5 reisuren. Toeslag {toeslag}")
+                postAfasData(data_list=data_value,
                              toeslag=toeslag)
 
             if uren_meer_dan_anderhalf:
-                normaalUren, toeslagUren = toeslagUrenBepalen(
-                    data_value=data_value)
-
+                normaalUren, toeslagUren = toeslagUrenBepalen(data_value=data_value,
+                                                              uren_vergoed=1.5)
+                
                 isFeestdag = feestdagCheck(date, data_feestdagen)
                 if isFeestdag:
                     toeslag = 2.5
-                    toeslagBerekend = overigeToeslag(data_value=toeslagUren,
-                                                     toeslag=toeslag)
-                    pprint(toeslagBerekend)
+                    postAfasData(data_list=toeslagUren,
+                             toeslag=2.5)
 
-                    continue
+                else:
+                    isWeekdag = dag in [1, 2, 3, 4, 5]
+                    if isWeekdag:
+                        print(f"{date} is een doordeweekse dag")
+                        weekdagToeslag(data_value=toeslagUren)
 
-                isWeekdag = dag in [1, 2, 3, 4, 5]
-                if isWeekdag:
-                    weekdagToeslag(data_value=toeslagUren)
-
-                isZaterdag = dag in [6]
-                if isZaterdag:
-                    toeslag = 1.5
-                    toeslagBerekend = overigeToeslag(data_value=toeslagUren,
-                                                     toeslag=toeslag)
-                    pprint(toeslagBerekend)
-
-                isZondag = dag in [7]
-                if isZondag:
-                    toeslag = 2
-                    toeslagBerekend = overigeToeslag(data_value=toeslagUren,
-                                                     toeslag=toeslag)
-                    pprint(toeslagBerekend)
+                    isZaterdag = dag in [6]
+                    if isZaterdag:
+                        print(f"{date} is een zaterdag")
+                        toeslag = 1.5
+                        postAfasData(data_list=toeslagUren,
+                                     toeslag=1.5)
+                        
+                    isZondag = dag in [7]
+                    if isZondag:
+                        print(f"{date} is een zondag")
+                        toeslag = 2
+                        postAfasData(data_list=toeslagUren,
+                                    toeslag=2)  
 
 
 if __name__ == "__main__":
