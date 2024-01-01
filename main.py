@@ -20,7 +20,7 @@ def getAfasData(url, connector, filters, token):
 
 def sortAfasData(data):
     sorted_data = defaultdict(lambda: defaultdict(list))
-    data = data[0]
+    data = [data[0]]
     for entry in data:
         medewerker_key = entry["Medewerker"]
         datum_key = entry['Datum'][:-10]
@@ -187,9 +187,10 @@ def applyConditions(sorted_data, data_feestdagen):
             # print(f"Emp: {emp_key}. Date: {date}. Total hours: {totallHours}")
 
             if not uren_meer_dan_anderhalf:
-                toeslag = 1
+                for entry in data_value:
+                        entry["Toeslag"] = "R100"
                 date = data_value[0]["Datum"].split('T')[0]
-                # print(f"Uren op {date} zijn binnen de eerste 1.5 reisuren. Toeslag {toeslag}")
+                print(f"Uren op {date} zijn binnen de eerste 1.5 reisuren. Toeslag R100")
                 postAfasData(data_list=data_value)
 
             if uren_meer_dan_anderhalf:
