@@ -1,5 +1,16 @@
 [
     {
+        "Description": "Eerste 1,5",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 1.5,
+        "Urensoort": "RU",
+        "Begintijd": "09:00:00",
+        "Eindtijd": "10:30:00"
+    },  
+    {
+        "Description": "Doordeweeks",
         "Medewerker": "1013989",
         "Weekdag": 1,
         "Datum": "2023-12-18T00:00:00Z",
@@ -7,4 +18,55 @@
         "Urensoort": "RU",
         "Begintijd": "00:00:00",
         "Eindtijd": "02:30:00"
-    }]
+    },
+    {
+        "Description": "Doordeweeks Nacht 1",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 2.5,
+        "Urensoort": "RU",
+        "Begintijd": "00:00:00",
+        "Eindtijd": "02:30:00"
+    },
+    {
+        "Description": "Doordeweeks Nacht 2",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 2.5,
+        "Urensoort": "RU",
+        "Begintijd": "00:00:00",
+        "Eindtijd": "02:30:00"
+    },
+    {
+        "Description": "Zaterdag",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 2.5,
+        "Urensoort": "RU",
+        "Begintijd": "00:00:00",
+        "Eindtijd": "02:30:00"
+    },
+    {
+        "Description": "Zondag",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 2.5,
+        "Urensoort": "RU",
+        "Begintijd": "00:00:00",
+        "Eindtijd": "02:30:00"
+    },
+    {
+        "Description": "Feestdag",
+        "Medewerker": "1013989",
+        "Weekdag": 1,
+        "Datum": "2023-12-18T00:00:00Z",
+        "Aantal": 2.5,
+        "Urensoort": "RU",
+        "Begintijd": "00:00:00",
+        "Eindtijd": "02:30:00"
+    }
+]

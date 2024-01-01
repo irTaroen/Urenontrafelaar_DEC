@@ -20,7 +20,7 @@ def getAfasData(url, connector, filters, token):
 
 def sortAfasData(data):
     sorted_data = defaultdict(lambda: defaultdict(list))
-
+    data = data[0]
     for entry in data:
         medewerker_key = entry["Medewerker"]
         datum_key = entry['Datum'][:-10]
@@ -66,6 +66,7 @@ def toeslagUrenBepalen(data_value, uren_vergoed):
             newEndTime = datetime.strptime(
                 entry_normal['Begintijd'], '%H:%M:%S') + timedelta(hours=normaal)
             entry_normal['Eindtijd'] = newEndTime.strftime('%H:%M:%S')
+            entry_normal["Toeslag"] = 1
             normaalUren.append(entry_normal)
 
             entry_toeslag = entry.copy()
@@ -107,15 +108,14 @@ def weekdagToeslag(data_value):
     nachtUren2_eind = datetime.strptime("06:00:00", '%H:%M:%S').time()
 
     tijdsvakken = {
-        "dagUren": {"begin":  dagUren_begin, "eind": dagUren_eind, "toeslag": 1},
-        "avondUren": {"begin": avondUren_begin, "eind": avondUren_eind, "toeslag": 1.25},
-        "nachtUren1": {"begin": nachtUren1_begin, "eind": nachtUren1_eind, "toeslag": 1.5},
-        "nachtUren2": {"begin": nachtUren2_begin, "eind": nachtUren2_eind, "toeslag": 1.5},
+        "dagUren": {"begin":  dagUren_begin, "eind": dagUren_eind, "toeslag": "R100"},
+        "avondUren": {"begin": avondUren_begin, "eind": avondUren_eind, "toeslag": "R125"},
+        "nachtUren1": {"begin": nachtUren1_begin, "eind": nachtUren1_eind, "toeslag": "R150"},
+        "nachtUren2": {"begin": nachtUren2_begin, "eind": nachtUren2_eind, "toeslag": "R150"},
     }
     newEntries = []
 
     for entry in data_value:
-        print(f"entry:{entry}")
         begintijd = datetime.strptime(entry["Begintijd"], '%H:%M:%S').time()
         eindtijd = datetime.strptime(entry["Eindtijd"], '%H:%M:%S').time()
 
@@ -140,7 +140,7 @@ def weekdagToeslag(data_value):
                 tempdict['Eindtijd'] = tijden['eind'].strftime('%H:%M:%S')
 
             # Add toeslag
-            tempdict['toeslag'] = tijden['toeslag']
+            tempdict['Toeslag'] = tijden['toeslag']
 
             # Add new amount
             time1 = datetime.strptime(tempdict['Eindtijd'], '%H:%M:%S').time(
@@ -152,10 +152,9 @@ def weekdagToeslag(data_value):
             tempdict['Aantal'] = round(time_difference,1)
             
             if time_difference:
-                newEntries.append(tempdict)
+                newEntries.append(tempdict) 
 
-    print()
-    pprint(newEntries)
+    return newEntries
 
 
 def feestdagCheck(date, list_of_holidays):
@@ -164,15 +163,15 @@ def feestdagCheck(date, list_of_holidays):
 
 
     if found:
-        print(f"{date} is een feestdag")
         return True
     else:
         return False
 
 
-def postAfasData(data_list, toeslag):
+def postAfasData(data_list):
 
     for entry in data_list:
+        toeslag = entry["Toeslag"]
         pprint(entry)
         print(f"Toeslag: {toeslag}")
 
@@ -191,38 +190,47 @@ def applyConditions(sorted_data, data_feestdagen):
                 toeslag = 1
                 date = data_value[0]["Datum"].split('T')[0]
                 # print(f"Uren op {date} zijn binnen de eerste 1.5 reisuren. Toeslag {toeslag}")
-                postAfasData(data_list=data_value,
-                             toeslag=toeslag)
+                postAfasData(data_list=data_value)
 
             if uren_meer_dan_anderhalf:
                 normaalUren, toeslagUren = toeslagUrenBepalen(data_value=data_value,
                                                               uren_vergoed=1.5)
+
+                postAfasData(data_list=normaalUren)
                 
                 isFeestdag = feestdagCheck(date, data_feestdagen)
                 if isFeestdag:
-                    toeslag = 2.5
-                    postAfasData(data_list=toeslagUren,
-                             toeslag=2.5)
+                    print(f"{date} is een feestdag")
+
+                    for entry in toeslagUren:
+                        entry["Toeslag"] = "R250"
+
+                    postAfasData(data_list=toeslagUren)
 
                 else:
                     isWeekdag = dag in [1, 2, 3, 4, 5]
                     if isWeekdag:
                         print(f"{date} is een doordeweekse dag")
-                        weekdagToeslag(data_value=toeslagUren)
+                        toeslag_berekend = weekdagToeslag(data_value=toeslagUren)
+                        postAfasData(data_list=toeslag_berekend)
+
 
                     isZaterdag = dag in [6]
                     if isZaterdag:
                         print(f"{date} is een zaterdag")
-                        toeslag = 1.5
-                        postAfasData(data_list=toeslagUren,
-                                     toeslag=1.5)
+
+                        for entry in toeslagUren:
+                            entry["Toeslag"] = "R150"
+        
+                        postAfasData(data_list=toeslagUren)
                         
                     isZondag = dag in [7]
                     if isZondag:
                         print(f"{date} is een zondag")
-                        toeslag = 2
-                        postAfasData(data_list=toeslagUren,
-                                    toeslag=2)  
+                        for entry in toeslagUren:
+                            entry["Toeslag"] = "R200"
+
+                        postAfasData(data_list=toeslagUren)  
 
 
 if __name__ == "__main__":
