@@ -94,7 +94,7 @@ def toeslagUrenBepalen(data_value, uren_vergoed):
 
 
     # print("\n")
-    return normaalUren, toeslagUren
+    return entry_normal, entry_toeslag
 
 
 def weekdagToeslag(data_value):
@@ -172,9 +172,9 @@ def feestdagCheck(date, list_of_holidays):
         return False
 
 
-def postAfasData(data_list):
+def postAfasData(new_entry, omgevingURL, connector, token):
 
-    for entry in data_list:
+    for entry in new_entry:
         pprint(entry)
 
         medewerker = entry["Medewerker"]
@@ -202,14 +202,14 @@ def postAfasData(data_list):
         }
         payload_json = json.dumps(payload)
 
-        # url = f'{omgevingURL}{connector}'
-        # headers = {
-        #     'authorization': token,
-        #     'content-type': "application/json"
-        # }
-        # updateTotalAmount = requests.post(url=url, 
-        #                                 headers=headers,
-        #                                 data=payload_json)
+        url = f'{omgevingURL}{connector}'
+        headers = {
+            'authorization': token,
+            'content-type': "application/json"
+        }
+        updateTotalAmount = requests.post(url=url, 
+                                        headers=headers,
+                                        data=payload_json)
 
 
 def applyConditions(date, data_value, data_feestdagen):
@@ -227,22 +227,22 @@ def applyConditions(date, data_value, data_feestdagen):
                 entry["Toeslag"] = "R100"
 
         print("Valt onder eerste 1.5 uur:")
-        postAfasData(data_list=data_value)
+        # postAfasData(data_list=data_value)
+        return data_value
 
     if uren_meer_dan_anderhalf:
         normaalUren, toeslagUren = toeslagUrenBepalen(data_value=data_value,
                                                         uren_vergoed=1.5)
         print("Valt onder eerste 1.5 uur:")
-        postAfasData(data_list=normaalUren)
         
         isFeestdag = feestdagCheck(date, data_feestdagen)
         if isFeestdag:
             print(f"{date} is een feestdag")
 
-            for entry in toeslagUren:
-                entry["Toeslag"] = "R250"
+            toeslagUren["Toeslag"] = "R250"
 
-            postAfasData(data_list=toeslagUren)
+            # postAfasData(data_list=toeslagUren)
+            return[normaalUren,toeslagUren]
 
         else:
             isWeekdag = dag in [1, 2, 3, 4, 5]
@@ -250,7 +250,8 @@ def applyConditions(date, data_value, data_feestdagen):
                 print(f"{date} is een doordeweekse dag")
                 toeslag_berekend = weekdagToeslag(data_value=toeslagUren)
 
-                postAfasData(data_list=toeslag_berekend)
+                # postAfasData(data_list=toeslag_berekend)
+                return[normaalUren,toeslag_berekend]
 
 
             isZaterdag = dag in [6]
@@ -260,7 +261,8 @@ def applyConditions(date, data_value, data_feestdagen):
                 for entry in toeslagUren:
                     entry["Toeslag"] = "R150"
 
-                postAfasData(data_list=toeslagUren)
+                # postAfasData(data_list=toeslagUren)
+                return[normaalUren,toeslagUren]
                 
             isZondag = dag in [7]
             if isZondag:
@@ -269,7 +271,8 @@ def applyConditions(date, data_value, data_feestdagen):
                 for entry in toeslagUren:
                     entry["Toeslag"] = "R200"
 
-                postAfasData(data_list=toeslagUren)  
+                # postAfasData(data_list=toeslagUren)  
+                return[normaalUren,toeslagUren]
 
 
 if __name__ == "__main__":
@@ -306,6 +309,9 @@ if __name__ == "__main__":
         for date_key, data_value in dates.items():
             date = date_key
 
-            applyConditions(date=date,
-                            data_value=data_value, 
-                            data_feestdagen=data_feestdagen)
+            toeslag_berekend = applyConditions(date=date,
+                                                data_value=data_value, 
+                                                data_feestdagen=data_feestdagen)
+            
+            for entry in toeslag_berekend:
+                pprint(entry)
