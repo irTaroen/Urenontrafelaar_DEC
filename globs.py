@@ -4,4 +4,5 @@ LIVE = {"token": 'AfasToken PHRva2VuPjx2ZXJzaW9uPjE8L3ZlcnNpb24+PGRhdGE+MjNBMTgz
 
 CONNECTOREN = {
     "connector_Reisuren": "Ontrafelaar_aBooth_reisuren_weekdagen",
-    "connector_Feestdagen": "Ontrafelaar_aBooth_Feestdagtabel"}
+    "connector_Feestdagen": "Ontrafelaar_aBooth_Feestdagtabel",
+    "updateConnector_PtRealization":"PtRealzation"}
