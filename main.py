@@ -20,7 +20,7 @@ def getAfasData(url, connector, filters, token):
 
 def sortAfasData(data):
     sorted_data = defaultdict(lambda: defaultdict(list))
-    # data = [data[0]]
+    # data = [data[7]]
     for entry in data:
         medewerker_key = entry["Medewerker"]
         datum_key = entry['Datum'][:-10]
@@ -94,7 +94,7 @@ def toeslagUrenBepalen(data_value, uren_vergoed):
 
 
     # print("\n")
-    return entry_normal, entry_toeslag
+    return entry_normal, [entry_toeslag]
 
 
 def weekdagToeslag(data_value):
@@ -172,17 +172,21 @@ def feestdagCheck(date, list_of_holidays):
         return False
 
 
-def postAfasData(new_entry, omgevingURL, connector, token):
+def postAfasData(normaalUren, toeslagUren, omgevingURL, connector, token):
 
-    for entry in new_entry:
-        pprint(entry)
+    url = f'{omgevingURL}{connector}'
+    headers = {
+        'authorization': token,
+        'content-type': "application/json"
+    }
+    
+    medewerker = normaalUren["Medewerker"]
+    datum = normaalUren["Datum"]
+    aantal = normaalUren["Aantal"]
+    toeslag = normaalUren["Toeslag"]
 
-        medewerker = entry["Medewerker"]
-        datum = entry["Datum"]
-        aantal = entry["Aantal"]
-        toeslag = entry["Toeslag"]
 
-        payload = {
+    payload_normaaluren = {
             "PtRealization": {
                 "Element": {
                     "Fields": {
@@ -200,16 +204,44 @@ def postAfasData(new_entry, omgevingURL, connector, token):
                 }
             }
         }
-        payload_json = json.dumps(payload)
+    payload_normaaluren_json = json.dumps(payload_normaaluren)
 
-        url = f'{omgevingURL}{connector}'
-        headers = {
-            'authorization': token,
-            'content-type': "application/json"
-        }
-        updateTotalAmount = requests.post(url=url, 
+    update_normaalUren = requests.post(url=url, 
                                         headers=headers,
-                                        data=payload_json)
+                                        data=payload_normaaluren_json)
+    print(update_normaalUren.status_code)
+    
+    for entry in toeslagUren:
+        medewerker = entry["Medewerker"]
+        datum = entry["Datum"]
+        aantal = entry["Aantal"]
+        toeslag = entry["Toeslag"]
+
+        payload_toeslagUren = {
+            "PtRealization": {
+                "Element": {
+                    "Fields": {
+                        "Id": -1,
+                        "DaTi": datum,
+                        "VaIt": "1",
+                        "ItCd": "*****",
+                        "Qu": aantal,
+                        "EmId": medewerker,
+                        "StId": toeslag,
+                        "Ds": 'Gewerkte uren',
+                        "Ap": True,
+                        "U38A2B67DA8B84B94BADBBB4D00FE4764": True
+                    }
+                }
+            }
+        }
+        payload_toeslagUren_json = json.dumps(payload_toeslagUren)
+
+        update_toeslagUren = requests.post(url=url, 
+                                        headers=headers,
+                                        data=payload_toeslagUren_json)
+        
+        print(update_toeslagUren.status_code)
 
 
 def applyConditions(date, data_value, data_feestdagen):
@@ -227,52 +259,49 @@ def applyConditions(date, data_value, data_feestdagen):
                 entry["Toeslag"] = "R100"
 
         print("Valt onder eerste 1.5 uur:")
-        # postAfasData(data_list=data_value)
-        return data_value
+        return data_value, []
 
     if uren_meer_dan_anderhalf:
         normaalUren, toeslagUren = toeslagUrenBepalen(data_value=data_value,
                                                         uren_vergoed=1.5)
-        print("Valt onder eerste 1.5 uur:")
-        
+        print("Meer dan 1.5 uur. Normaaluren:")
+
         isFeestdag = feestdagCheck(date, data_feestdagen)
         if isFeestdag:
             print(f"{date} is een feestdag")
+            for entry in toeslagUren:
+                entry["Toeslag"] = "R250"
 
-            toeslagUren["Toeslag"] = "R250"
-
-            # postAfasData(data_list=toeslagUren)
-            return[normaalUren,toeslagUren]
+            return normaalUren, [toeslagUren]
 
         else:
             isWeekdag = dag in [1, 2, 3, 4, 5]
             if isWeekdag:
-                print(f"{date} is een doordeweekse dag")
                 toeslag_berekend = weekdagToeslag(data_value=toeslagUren)
+                print(f"{date} is een doordeweekse dag. Toeslaguren:")
 
-                # postAfasData(data_list=toeslag_berekend)
-                return[normaalUren,toeslag_berekend]
+                return normaalUren, [toeslag_berekend]
 
 
             isZaterdag = dag in [6]
             if isZaterdag:
-                print(f"{date} is een zaterdag")
 
                 for entry in toeslagUren:
                     entry["Toeslag"] = "R150"
 
-                # postAfasData(data_list=toeslagUren)
-                return[normaalUren,toeslagUren]
+                print(f"{date} is een zaterdag. Toeslaguren:")
+
+                return normaalUren, toeslagUren
                 
             isZondag = dag in [7]
             if isZondag:
-                print(f"{date} is een zondag")
 
                 for entry in toeslagUren:
                     entry["Toeslag"] = "R200"
 
-                # postAfasData(data_list=toeslagUren)  
-                return[normaalUren,toeslagUren]
+                print(f"{date} is een zondag. Toeslaguren:")
+
+                return normaalUren, toeslagUren
 
 
 if __name__ == "__main__":
@@ -289,29 +318,36 @@ if __name__ == "__main__":
                                   connector=connector_Feestdagen,
                                   filters="/?skip=-1take=-1",
                                   token=token)
-    # pprint(data_feestdagen)
 
-    # data_reisuren = getAfasData(url=url,
-    #                             connector=connector_Reisuren,
-    #                             filters="/?skip=-1take=-1",
-    #                             token=token)
-    # with open("data/output/reisuren.json", 'w') as jsonfile:
-    #     json.dump(data_reisuren, jsonfile, indent=4)
+    data_reisuren = getAfasData(url=url,
+                                connector=connector_Reisuren,
+                                filters="/?skip=-1take=-1",
+                                token=token)
 
-    with open("data/output/reisuren.json", 'r') as jsonfile:
-        data_reisuren = json.load(jsonfile)
+    
+    if data_reisuren:
+        with open("data/output/reisuren.json", 'w') as jsonfile:
+            json.dump(data_reisuren, jsonfile, indent=4)
 
-    sorted_data = sortAfasData(data_reisuren)
+        # with open("data/output/reisuren.json", 'r') as jsonfile:
+        #     data_reisuren = json.load(jsonfile)
 
-    for emp_key, dates in sorted_data.items():
-        employee = emp_key
+        sorted_data = sortAfasData(data_reisuren)
 
-        for date_key, data_value in dates.items():
-            date = date_key
+        for emp_key, dates in sorted_data.items():
+            employee = emp_key
 
-            toeslag_berekend = applyConditions(date=date,
-                                                data_value=data_value, 
-                                                data_feestdagen=data_feestdagen)
-            
-            for entry in toeslag_berekend:
-                pprint(entry)
+            for date_key, data_value in dates.items():
+                date = date_key
+                pprint(data_value)
+
+                normaalUren, toeslagUren = applyConditions(date=date,
+                                                    data_value=data_value, 
+                                                    data_feestdagen=data_feestdagen)
+                pprint(normaalUren)
+                pprint(toeslagUren)
+
+                for entry in toeslagUren:
+                    pprint(entry)
+    else:
+        print("Er zijn geen reisuren om te verwerken")
